@@ -168,9 +168,37 @@ public class TransPass2 extends Tree.Visitor {
 	@Override
 	public void visitUnary(Tree.Unary expr) {
 		expr.expr.accept(this);
+
+		Temp one = tr.genLoadImm4(1);
+		Temp tem = Temp.createTempI4();
+		
 		switch (expr.tag){
 		case Tree.NEG:
 			expr.val = tr.genNeg(expr.expr.val);
+			break;
+		case Tree.POSTINC:
+			expr.val = Temp.createTempI4();
+			tr.genAssign(expr.val, expr.expr.val);
+			tem = tr.genAdd(expr.expr.val, one);
+			tr.genAssign(expr.expr.val, tem);
+			break;
+		case Tree.PREINC:
+			expr.val = Temp.createTempI4();
+			tem = tr.genAdd(expr.expr.val, one);
+			tr.genAssign(expr.expr.val, tem);
+			tr.genAssign(expr.val, expr.expr.val);
+			break;
+		case Tree.POSTDEC:
+			expr.val = Temp.createTempI4();
+			tr.genAssign(expr.val, expr.expr.val);
+			tem = tr.genSub(expr.expr.val, one);
+			tr.genAssign(expr.expr.val, tem);
+			break;
+		case Tree.PREDEC:
+			expr.val = Temp.createTempI4();
+			tem = tr.genSub(expr.expr.val, one);
+			tr.genAssign(expr.expr.val, tem);
+			tr.genAssign(expr.val, expr.expr.val);
 			break;
 		default:
 			expr.val = tr.genLNot(expr.expr.val);
