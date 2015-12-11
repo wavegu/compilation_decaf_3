@@ -8,6 +8,7 @@ import decaf.machdesc.Intrinsic;
 import decaf.symbol.Variable;
 import decaf.tac.Label;
 import decaf.tac.Temp;
+import decaf.tac.Tac;
 import decaf.type.BaseType;
 
 public class TransPass2 extends Tree.Visitor {
@@ -59,6 +60,46 @@ public class TransPass2 extends Tree.Visitor {
 	}
 
 	@Override
+	public void visitUnary(Tree.Unary expr) {
+		expr.expr.accept(this);
+
+		Temp one = tr.genLoadImm4(1);
+		Temp tem = Temp.createTempI4();
+		
+		switch (expr.tag){
+		case Tree.NEG:
+			expr.val = tr.genNeg(expr.expr.val);
+			break;
+		case Tree.POSTINC:
+			expr.val = Temp.createTempI4();
+			tr.genAssign(expr.val, expr.expr.val);
+			tem = tr.genAdd(expr.expr.val, one);
+			tr.genAssign(expr.expr.val, tem);
+			break;
+		case Tree.PREINC:
+			expr.val = Temp.createTempI4();
+			tem = tr.genAdd(expr.expr.val, one);
+			tr.genAssign(expr.expr.val, tem);
+			tr.genAssign(expr.val, expr.expr.val);
+			break;
+		case Tree.POSTDEC:
+			expr.val = Temp.createTempI4();
+			tr.genAssign(expr.val, expr.expr.val);
+			tem = tr.genSub(expr.expr.val, one);
+			tr.genAssign(expr.expr.val, tem);
+			break;
+		case Tree.PREDEC:
+			expr.val = Temp.createTempI4();
+			tem = tr.genSub(expr.expr.val, one);
+			tr.genAssign(expr.expr.val, tem);
+			tr.genAssign(expr.val, expr.expr.val);
+			break;
+		default:
+			expr.val = tr.genLNot(expr.expr.val);
+		}
+	}
+
+	@Override
 	public void visitBinary(Tree.Binary expr) {
 		expr.left.accept(this);
 		expr.right.accept(this);
@@ -101,6 +142,25 @@ public class TransPass2 extends Tree.Visitor {
 			genEquNeq(expr);
 			break;
 		}
+	}
+
+	@Override
+	public void visitTrinary(Tree.Trinary expr) {
+		expr.left.accept(this);
+		expr.middle.accept(this);
+		expr.right.accept(this);
+		// Label assignRightLabel = 
+		expr.val = expr.middle.val;
+		Tac assignMiddle = Tac.genAssign(expr.val, expr.middle.val);
+		Tac assignRight = Tac.genAssign(expr.val, expr.right.val);
+		Tac assignSelf = Tac.genAssign(expr.val, expr.val);
+		assignSelf.label = Label.createLabel();
+		Tac bnez = Tac.genBnez(expr.left.val, assignSelf.label);
+		tr.append(assignMiddle);
+		tr.append(bnez);
+		tr.append(assignRight);
+		tr.append(assignSelf);
+		tr.genMark(assignSelf.label);
 	}
 
 	private void genEquNeq(Tree.Binary expr) {
@@ -163,46 +223,6 @@ public class TransPass2 extends Tree.Visitor {
 	@Override
 	public void visitExec(Tree.Exec exec) {
 		exec.expr.accept(this);
-	}
-
-	@Override
-	public void visitUnary(Tree.Unary expr) {
-		expr.expr.accept(this);
-
-		Temp one = tr.genLoadImm4(1);
-		Temp tem = Temp.createTempI4();
-		
-		switch (expr.tag){
-		case Tree.NEG:
-			expr.val = tr.genNeg(expr.expr.val);
-			break;
-		case Tree.POSTINC:
-			expr.val = Temp.createTempI4();
-			tr.genAssign(expr.val, expr.expr.val);
-			tem = tr.genAdd(expr.expr.val, one);
-			tr.genAssign(expr.expr.val, tem);
-			break;
-		case Tree.PREINC:
-			expr.val = Temp.createTempI4();
-			tem = tr.genAdd(expr.expr.val, one);
-			tr.genAssign(expr.expr.val, tem);
-			tr.genAssign(expr.val, expr.expr.val);
-			break;
-		case Tree.POSTDEC:
-			expr.val = Temp.createTempI4();
-			tr.genAssign(expr.val, expr.expr.val);
-			tem = tr.genSub(expr.expr.val, one);
-			tr.genAssign(expr.expr.val, tem);
-			break;
-		case Tree.PREDEC:
-			expr.val = Temp.createTempI4();
-			tem = tr.genSub(expr.expr.val, one);
-			tr.genAssign(expr.expr.val, tem);
-			tr.genAssign(expr.val, expr.expr.val);
-			break;
-		default:
-			expr.val = tr.genLNot(expr.expr.val);
-		}
 	}
 
 	@Override
