@@ -192,18 +192,23 @@ public class TransPass2 extends Tree.Visitor {
 	public void visitGuardedDoStmt(Tree.GuardedDoStmt gistmt) {
 		Label exit = Label.createLabel();
 		loopExits.push(exit);
+
+		Label start = Label.createLabel();
+		tr.genMark(start);
+		Temp lastBoolVal = Temp.createTempI4();
+        
         for (Tree.GuardedStmt g: gistmt.glist) {
-        	Label loop = Label.createLabel();
-        	tr.genMark(loop);
 			g.boolExpr.accept(this);
+        	lastBoolVal = g.boolExpr.val;
 			Label gexit = Label.createLabel();
 			tr.genBeqz(g.boolExpr.val, gexit);
 			loopExits.push(exit);
 			g.stmt.accept(this);
-			tr.genBranch(loop);
+			tr.genBranch(start);
 			loopExits.pop();
 			tr.genMark(gexit);
         }
+        tr.genBnez(lastBoolVal, start);
 		loopExits.pop();
 		tr.genMark(exit);
 	}
