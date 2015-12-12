@@ -10,6 +10,8 @@ import decaf.tac.Label;
 import decaf.tac.Temp;
 import decaf.tac.Tac;
 import decaf.type.BaseType;
+import decaf.Driver;
+import decaf.symbol.Class;
 
 public class TransPass2 extends Tree.Visitor {
 
@@ -144,12 +146,13 @@ public class TransPass2 extends Tree.Visitor {
 		}
 	}
 
+	/*-----------------PA3 added------------------*/
+
 	@Override
 	public void visitTrinary(Tree.Trinary expr) {
 		expr.left.accept(this);
 		expr.middle.accept(this);
 		expr.right.accept(this);
-		// Label assignRightLabel = 
 		expr.val = expr.middle.val;
 		Tac assignMiddle = Tac.genAssign(expr.val, expr.middle.val);
 		Tac assignRight = Tac.genAssign(expr.val, expr.right.val);
@@ -161,6 +164,66 @@ public class TransPass2 extends Tree.Visitor {
 		tr.append(assignRight);
 		tr.append(assignSelf);
 		tr.genMark(assignSelf.label);
+	}
+
+	@Override
+	public void visitNuminstances(Tree.Numinstances expr) {
+		System.out.println("visiting class " + expr.ident);
+    	// expr.accept(this);
+    	Class targetClass = Driver.getDriver().getTable().lookupClass(expr.ident);
+		System.out.println(targetClass.classNumMap.get(expr.ident));
+    	Temp numInstance = tr.genLoadImm4(targetClass.classNumMap.get(expr.ident));
+    	expr.val = numInstance;
+    	tr.genAssign(expr.val, numInstance);
+    }
+
+	@Override
+	public void visitGuardedIfStmt(Tree.GuardedIfStmt gistmt) {
+		Label exit = Label.createLabel();
+        for (Tree.GuardedStmt g: gistmt.glist) {
+			g.boolExpr.accept(this);
+			tr.genBeqz(g.boolExpr.val, exit);
+			g.stmt.accept(this);
+        }
+		tr.genMark(exit);
+	}
+
+	@Override
+	public void visitGuardedDoStmt(Tree.GuardedDoStmt gistmt) {
+		Label exit = Label.createLabel();
+		loopExits.push(exit);
+        for (Tree.GuardedStmt g: gistmt.glist) {
+        	Label loop = Label.createLabel();
+        	tr.genMark(loop);
+			g.boolExpr.accept(this);
+			Label gexit = Label.createLabel();
+			tr.genBeqz(g.boolExpr.val, gexit);
+			loopExits.push(exit);
+			g.stmt.accept(this);
+			tr.genBranch(loop);
+			loopExits.pop();
+			tr.genMark(gexit);
+        }
+		loopExits.pop();
+		tr.genMark(exit);
+	}
+
+	/*-------------------------------------------*/
+
+	@Override
+	public void visitWhileLoop(Tree.WhileLoop whileLoop) {
+		Label loop = Label.createLabel();
+		tr.genMark(loop);
+		whileLoop.condition.accept(this);
+		Label exit = Label.createLabel();
+		tr.genBeqz(whileLoop.condition.val, exit);
+		loopExits.push(exit);
+		if (whileLoop.loopBody != null) {
+			whileLoop.loopBody.accept(this);
+		}
+		tr.genBranch(loop);
+		loopExits.pop();
+		tr.genMark(exit);
 	}
 
 	private void genEquNeq(Tree.Binary expr) {
@@ -401,22 +464,6 @@ public class TransPass2 extends Tree.Visitor {
 	public void visitNewClass(Tree.NewClass newClass) {
 		newClass.val = tr.genDirectCall(newClass.symbol.getNewFuncLabel(),
 				BaseType.INT);
-	}
-
-	@Override
-	public void visitWhileLoop(Tree.WhileLoop whileLoop) {
-		Label loop = Label.createLabel();
-		tr.genMark(loop);
-		whileLoop.condition.accept(this);
-		Label exit = Label.createLabel();
-		tr.genBeqz(whileLoop.condition.val, exit);
-		loopExits.push(exit);
-		if (whileLoop.loopBody != null) {
-			whileLoop.loopBody.accept(this);
-		}
-		tr.genBranch(loop);
-		loopExits.pop();
-		tr.genMark(exit);
 	}
 
 	@Override

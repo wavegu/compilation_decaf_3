@@ -545,16 +545,6 @@ public class TypeCheck extends Tree.Visitor {
 		}
 	}
 
-	@Override
-	public void visitWhileLoop(Tree.WhileLoop whileLoop) {
-		checkTestExpr(whileLoop.condition);
-		breaks.add(whileLoop);
-		if (whileLoop.loopBody != null) {
-			whileLoop.loopBody.accept(this);
-		}
-		breaks.pop();
-	}
-
 	// visiting types
 	@Override
 	public void visitTypeIdent(Tree.TypeIdent type) {
@@ -623,10 +613,21 @@ public class TypeCheck extends Tree.Visitor {
 
 	@Override
 	public void visitGuardedDoStmt(Tree.GuardedDoStmt gdstmt) {
-		breaks.add(gdstmt);
+		breaks.push(gdstmt);
         for (Tree.GuardedStmt g: gdstmt.glist) {
         	g.accept(this);
         }
+    	breaks.pop();
+	}
+
+	@Override
+	public void visitWhileLoop(Tree.WhileLoop whileLoop) {
+		checkTestExpr(whileLoop.condition);
+		breaks.add(whileLoop);
+		if (whileLoop.loopBody != null) {
+			whileLoop.loopBody.accept(this);
+		}
+		breaks.pop();
 	}
 
 

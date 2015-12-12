@@ -253,7 +253,7 @@ public class BuildSym extends Tree.Visitor {
         	g.accept(this);
         }
 	}
-
+	
 	private int calcOrder(Class c) {
 		if (c == null) {
 			return -1;

@@ -10,8 +10,13 @@ import decaf.scope.GlobalScope;
 import decaf.tac.Label;
 import decaf.tac.VTable;
 import decaf.type.ClassType;
+import java.util.HashMap;
 
 public class Class extends Symbol {
+
+	public static HashMap<String, Integer> classNumMap = new HashMap<String, Integer>();
+
+	public int numInstance = 0;
 
 	private String parentName;
 
@@ -72,6 +77,8 @@ public class Class extends Symbol {
 	}
 
 	public Class(String name, String parentName, Location location) {
+		// System.out.println("@Class: new class " + name);
+
 		this.name = name;
 		this.parentName = parentName;
 		this.location = location;
@@ -80,6 +87,12 @@ public class Class extends Symbol {
 		this.numNonStaticFunc = -1;
 		this.numVar = -1;
 		this.associatedScope = new ClassScope(this);
+
+		if (this.classNumMap.get(this.name) == null) {
+			this.classNumMap.put(this.name, 1);
+		} else {
+			this.classNumMap.put(this.name, this.classNumMap.get(this.name) + 1);
+		}
 	}
 
 	public void createType() {
