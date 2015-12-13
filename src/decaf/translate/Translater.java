@@ -371,6 +371,17 @@ public class Translater {
 		genMark(exit);
 	}
 
+	public void genCheckDividedByZero(Temp devideNum) {
+		Label exit = Label.createLabel();
+		Temp cond = genEqu(devideNum, genLoadImm4(0));
+		genBeqz(cond, exit);
+		Temp msg = genLoadStrConst(RuntimeError.DIVIDED_BY_ZERO);
+		genParm(msg);
+		genIntrinsicCall(Intrinsic.PRINT_STRING);
+		genIntrinsicCall(Intrinsic.HALT);
+		genMark(exit);
+	}
+
 	public Temp genNewArray(Temp length) {
 		genCheckNewArraySize(length);
 		Temp unit = genLoadImm4(OffsetCounter.WORD_SIZE);
