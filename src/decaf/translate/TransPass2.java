@@ -12,8 +12,11 @@ import decaf.tac.Tac;
 import decaf.type.BaseType;
 import decaf.Driver;
 import decaf.symbol.Class;
+import java.util.HashMap;
 
 public class TransPass2 extends Tree.Visitor {
+
+	public static HashMap<String, Temp> classNumMap = new HashMap<String, Temp>();
 
 	private Translater tr;
 
@@ -31,6 +34,8 @@ public class TransPass2 extends Tree.Visitor {
 		for (Tree f : classDef.fields) {
 			f.accept(this);
 		}
+
+		// System.out.println("creating classmap key:" + classDef.name);
 	}
 
 	@Override
@@ -170,11 +175,9 @@ public class TransPass2 extends Tree.Visitor {
 
 	@Override
 	public void visitNuminstances(Tree.Numinstances expr) {
-		System.out.println("visiting class " + expr.ident);
-    	// expr.accept(this);
+		// System.out.println("visiting class " + expr.ident);
     	Class targetClass = Driver.getDriver().getTable().lookupClass(expr.ident);
-		System.out.println(targetClass.classNumMap.get(expr.ident));
-    	Temp numInstance = tr.genLoadImm4(targetClass.classNumMap.get(expr.ident));
+    	Temp numInstance = classNumMap.get(expr.ident);
     	expr.val = numInstance;
     	tr.genAssign(expr.val, numInstance);
     }
@@ -469,6 +472,16 @@ public class TransPass2 extends Tree.Visitor {
 
 	@Override
 	public void visitNewClass(Tree.NewClass newClass) {
+		if (classNumMap.get(newClass.className) == null) {
+			Temp tem = Temp.createTempI4();
+			tem.value = 0;
+			classNumMap.put(newClass.className, tem);		
+		}
+
+		Temp classNum = classNumMap.get(newClass.className);
+		Temp newClassNum = tr.genAdd(classNum, tr.genLoadImm4(1));
+		tr.genAssign(classNum, newClassNum);
+		classNumMap.put(newClass.className, newClassNum);
 		newClass.val = tr.genDirectCall(newClass.symbol.getNewFuncLabel(),
 				BaseType.INT);
 	}
